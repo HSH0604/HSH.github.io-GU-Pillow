@@ -14,7 +14,7 @@
 | 類型 | 靜態 HTML 單頁網站 + 後台管理系統 |
 | 商品數量 | 70 款抱枕 |
 | 部署平台 | GitHub Pages |
-| 後台管理 | `admin.html`（瀏覽器端，localStorage 儲存）|
+| 後台管理 | `admin.html`（瀏覽器端，IndexedDB 儲存）|
 
 ---
 
@@ -34,13 +34,24 @@
 
 ```
 抱枕批發網站/
-├── index.html          # 前端網站主檔（自動產生，含 Base64 圖片）
+├── index.html          # 前端網站主檔（自動產生，圖片用 URL，約 67KB）
 ├── admin.html          # 後台管理系統
-├── products_v2.json    # 商品資料備份（含圖片）
+├── products_v2.json    # 商品資料備份（含圖片 base64）
 ├── README.md           # 本文件
 ├── CHANGELOG.md        # 版本更新紀錄
-├── gen_index.py        # 前端 HTML 產生腳本（Python）
+├── gen_index.py        # 前端 HTML 產生腳本（Python，緊急備援用）
+├── deploy.py           # GitHub 批量上傳腳本（緊急備援用）
 └── 居院網頁製作說明.md   # 原始製作說明
+
+GitHub Repository 結構：
+├── index.html          # 前端網站（67KB）
+├── admin.html          # 後台管理
+├── images/             # 商品圖片資料夾（70 張，各自獨立 JPG）
+│   ├── G-14B260001.jpg
+│   ├── G-14B260002.jpg
+│   └── ...（共 70 張）
+├── README.md
+└── CHANGELOG.md
 ```
 
 ---
@@ -61,14 +72,16 @@
 - **重複料號檢查**：有任何一筆重複即阻擋匯入
 
 ### 發布系統
-- 一鍵產生前端 `index.html`
-- 透過 GitHub API 自動推送部署
+- 一鍵產生前端 `index.html`（約 67KB，不含圖片）
+- 圖片自動上傳至 GitHub `images/` 資料夾（智慧快取，只上傳有變動的圖片）
+- 透過 Supabase Edge Function 代理安全推送至 GitHub
 - 預覽 HTML（不影響線上網站）
 - 部署紀錄即時顯示
 
 ### 安全性
 - 登入驗證（帳號 + 密碼）
 - Session 管理（關閉分頁自動登出）
+- GitHub Token 存於 Supabase 伺服器端，不暴露於瀏覽器
 
 ---
 
@@ -125,13 +138,33 @@ python gen_index.py
 
 ---
 
+## 發布流程說明
+
+### 正常發布（後台操作）
+1. 登入後台 → 修改商品資料
+2. 左側點「🚀 發布到網站」
+3. 點「🚀 產生並發布」
+4. 系統自動：① 上傳有變動的圖片到 `images/` ② 產生並上傳 67KB 的 HTML
+5. 等待 1–2 分鐘後按 `Ctrl+Shift+R` 重新整理前台
+
+### 緊急備援（Python 腳本）
+```bash
+# 重新產生 index.html（從 products_v2.json）
+python gen_index.py
+
+# 上傳所有檔案到 GitHub
+python deploy.py
+```
+
 ## 注意事項
 
-- `index.html` 含 Base64 圖片，檔案約 5MB，GitHub 單檔上限 25MB
-- Token 到期後需至 GitHub Developer Settings 重新 Regenerate
-- 後台資料存於瀏覽器 localStorage，換電腦需先匯出 JSON 再匯入
-- 去背功能首次使用需下載約 50MB AI 模型（之後快取）
+- `index.html` 現為純文字 + 圖片 URL，約 **67KB**（v1.1.0 架構改版後）
+- 圖片存於 GitHub `images/` 資料夾，共 70 張
+- Token 到期（2027-05-31）後需至 GitHub Developer Settings 重新 Regenerate，並更新 Supabase Edge Function
+- 後台商品資料存於瀏覽器 **IndexedDB**，換電腦需先「匯出 JSON」再「匯入 JSON」
+- 去背功能採 Canvas Flood Fill 演算法，純瀏覽器端執行，無需費用
+- Supabase Edge Function 代理：`github-proxy` v4（ap-southeast-1）
 
 ---
 
-*居院抱枕批發目錄 — 後台管理系統 v2.0*
+*居院抱枕批發目錄 — 後台管理系統 v1.1.0*
