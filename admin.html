@@ -476,6 +476,10 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
             · 此處儲存原圖；發布前端網頁時自動去背
           </div>
           <input type="hidden" id="f-img">
+          <div id="rembg-bar" style="display:none;align-items:center;gap:10px;margin-top:10px">
+            <button type="button" class="btn btn-outline btn-sm" onclick="removeBgCurrent()">✂️ 一鍵去背</button>
+            <span id="rembg-status" style="font-size:12px;color:var(--muted)"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -918,6 +922,23 @@ function removeBgFromBase64(base64, tolerance=40){
     img.onerror = ()=>resolve(base64);
     img.src = base64;
   });
+}
+
+async function removeBgCurrent(){
+  const b64 = document.getElementById('f-img').value;
+  if(!b64){ toast('請先上傳圖片', 'error'); return; }
+  const statusEl = document.getElementById('rembg-status');
+  statusEl.textContent = '去背處理中…';
+  try {
+    const result = await removeBgFromBase64(b64);
+    document.getElementById('f-img').value = result;
+    document.getElementById('img-preview-wrap').innerHTML =
+      `<img src="${result}" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
+       <div class="img-upload-hint">點擊更換圖片</div>`;
+    statusEl.textContent = '✅ 去背完成';
+  } catch(e) {
+    statusEl.textContent = '❌ 去背失敗';
+  }
 }
 
 function compressImage(file, maxPx, quality, cb){
