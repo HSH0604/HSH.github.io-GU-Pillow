@@ -1123,14 +1123,17 @@ function saveGHSettings(){}
 //  HTML GENERATION
 // ════════════════════════════════════════════════
 
-async function generateHTML(onProgress){
+async function generateHTML(onProgress, imageMap=null){
   const rawProducts = getProducts();
-  // 對每張圖去背
+  // 預覽模式才做去背（deploy 時用 imageMap URL，不需去背）
   const products = [];
   for(let i=0; i<rawProducts.length; i++){
     const p = rawProducts[i];
     if(onProgress) onProgress(i+1, rawProducts.length, p.id);
-    products.push({ ...p, img: p.img ? await removeBgFromBase64(p.img) : p.img });
+    const img = imageMap
+      ? (imageMap[p.id] || p.img)           // deploy: 用 GitHub URL / 原始 base64 fallback
+      : (p.img ? await removeBgFromBase64(p.img) : p.img); // preview: 去背
+    products.push({ ...p, img });
   }
   const cfg = getCfg();
   const cats = cfg.cats.split(',').map(s=>s.trim()).filter(Boolean);
@@ -1396,41 +1399,82 @@ async function proxyUpload(filePath, content, message, sha){
   return { ok: res.ok, data: await res.json() };
 }
 
+// 簡易雜湊：用長度 + 尾端字串快速判斷圖片是否有變化
+function imgHash(b64){ return b64 ? b64.length + '|' + b64.slice(-16) : ''; }
+
+async function uploadRaw(remotePath, bodyData, mimeType, commitMsg, sha){
+  const msg = encodeURIComponent(commitMsg);
+  const shaParam = sha ? `&sha=${sha}` : '';
+  const res = await fetch(
+    `${PROXY_URL}?action=upload_raw&file=${encodeURIComponent(remotePath)}&msg=${msg}${shaParam}`,
+    { method:'POST', headers:{'x-admin-key':PROXY_KEY,'Content-Type':mimeType}, body:bodyData }
+  );
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
 async function deployToGitHub(){
   const box = document.getElementById('deploy-log');
   box.innerHTML = '';
-  log(`[${new Date().toLocaleTimeString()}] 開始產生網頁…`, 'info');
+  log(`[${new Date().toLocaleTimeString()}] 開始部署流程…`, 'info');
 
-  const htmlContent = await generateHTML();
-  log(`✅ 網頁產生完成（${(htmlContent.length/1024).toFixed(0)} KB）`, 'info');
-  log('透過安全代理伺服器上傳到 GitHub…');
+  const products = getProducts();
+  let imgCache = {};
+  try { imgCache = JSON.parse(localStorage.getItem('gu_img_deploy_cache')||'{}'); } catch(e){}
 
+  // ── Step 1：上傳有變化的圖片 ──────────────────────────────
+  const imageMap = {};   // { id: 'images/GU001.jpg' | '' }
+  let uploadedCount = 0, skippedCount = 0;
+  const toUpload = products.filter(p => p.img && imgHash(p.img) !== imgCache[p.id]);
+  log(`📸 圖片：${toUpload.length} 張需更新，${products.length - toUpload.length} 張略過`, 'info');
+
+  for(const p of products){
+    if(!p.img){ imageMap[p.id] = ''; continue; }
+    const imgPath = `images/${p.id}.jpg`;
+    imageMap[p.id] = imgPath;
+
+    const hash = imgHash(p.img);
+    if(imgCache[p.id] === hash){ skippedCount++; continue; } // 未變更
+
+    // base64 → Uint8Array
+    const b64 = p.img.includes(',') ? p.img.split(',')[1] : p.img;
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+
+    const sha = await proxyGetSHA(imgPath);
+    const { ok } = await uploadRaw(imgPath, bytes, 'application/octet-stream', `更新圖片 ${p.id}`, sha);
+    if(ok){
+      imgCache[p.id] = hash;
+      uploadedCount++;
+      log(`  ✅ ${p.id} (${uploadedCount}/${toUpload.length})`);
+    } else {
+      log(`  ⚠️ ${p.id} 圖片上傳失敗，將使用 base64 備援`, 'err');
+      imageMap[p.id] = p.img; // fallback
+    }
+  }
+  localStorage.setItem('gu_img_deploy_cache', JSON.stringify(imgCache));
+  log(`✅ 圖片完成：${uploadedCount} 張上傳，${skippedCount} 張略過`, 'info');
+
+  // ── Step 2：產生輕量 HTML（圖片用 URL，不含 base64）──────
+  log('產生前端 HTML…', 'info');
+  const htmlContent = await generateHTML(null, imageMap);
+  log(`✅ HTML 產生完成（${(htmlContent.length/1024).toFixed(0)} KB）`, 'info');
+
+  // ── Step 3：上傳 HTML ─────────────────────────────────────
   try {
-    // 取得現有 SHA
-    log('取得檔案 SHA…');
+    log('上傳 index.html…', 'info');
     const sha = await proxyGetSHA('index.html');
     if(sha) log(`目前 SHA：${sha.slice(0,8)}…`);
-    else log('index.html 尚不存在，將建立新檔案', 'info');
-
-    // 上傳（使用 upload_raw：瀏覽器送原始 HTML，伺服器端做 base64，避免超過大小限制）
-    log('正在上傳 index.html…');
-    const msg = encodeURIComponent(`更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`);
-    const shaParam = sha ? `&sha=${sha}` : '';
-    const uploadUrl = `${PROXY_URL}?action=upload_raw&file=index.html&msg=${msg}${shaParam}`;
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: { 'x-admin-key': PROXY_KEY, 'Content-Type': 'text/plain; charset=utf-8' },
-      body: htmlContent
-    });
-    const data = await res.json();
-
-    if(!res.ok) throw new Error(data.message || data.error || '上傳失敗');
-
+    const { ok, data } = await uploadRaw(
+      'index.html', htmlContent, 'text/plain; charset=utf-8',
+      `更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`, sha
+    );
+    if(!ok) throw new Error(data.message || data.error || '上傳失敗');
     log(`✅ 上傳成功！Commit：${data.commit?.sha?.slice(0,8)||'—'}`, 'info');
     log(`🌐 網址：https://HSH0604.github.io/HSH.github.io-GU-Pillow/`);
     log('請等待 1–2 分鐘後，按 Ctrl+Shift+R 強制重新整理。');
     toast('發布成功！', 'success');
-
   } catch(err){
     log(`❌ 發布失敗：${err.message}`, 'err');
     toast('發布失敗：'+err.message, 'error');
