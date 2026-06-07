@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>居院 — 後台管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ede8;--sidebar:#2c2420;--sidebar-hover:#3d3330;--sidebar-active:#7a6355;
+  --white:#fff;--card:#fff;--border:#e0d9d0;--text:#2c2420;--muted:#7a6355;
+  --accent:#9b8470;--success:#5a8a6a;--danger:#c0392b;--warn:#d4845a;
+  --blue:#4a7a9b;--radius:10px;--shadow:0 2px 12px rgba(44,36,32,.08);
+}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
+
+/* ── SIDEBAR ── */
+#sidebar{width:220px;min-height:100vh;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:.3s}
+.sidebar-brand{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-brand h1{font-family:'Noto Serif TC',serif;color:#faf8f4;font-size:20px;font-weight:400;letter-spacing:2px}
+.sidebar-brand p{color:var(--accent);font-size:11px;margin-top:4px;letter-spacing:1px}
+.sidebar-nav{flex:1;padding:16px 0}
+.nav-section{padding:8px 20px 4px;color:rgba(255,255,255,.3);font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,.7);cursor:pointer;transition:.2s;font-size:13px}
+.nav-item:hover{background:var(--sidebar-hover);color:#fff}
+.nav-item.active{background:var(--sidebar-active);color:#fff}
+.nav-item .icon{width:18px;text-align:center;font-size:15px}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.3);font-size:11px}
+
+/* ── MAIN ── */
+#main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--white);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.topbar h2{font-size:16px;font-weight:500;color:var(--text)}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+.content{padding:28px;flex:1}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:400;transition:.2s;white-space:nowrap}
+.btn:hover{filter:brightness(.92)}
+.btn-primary{background:var(--sidebar);color:#fff}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-warn{background:var(--warn);color:#fff}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.btn-outline:hover{background:var(--bg)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:5px}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:6px}
+
+/* ── CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.stat-card .label{color:var(--muted);font-size:12px;margin-bottom:6px}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--text)}
+.stat-card .sub{color:var(--muted);font-size:11px;margin-top:4px}
+
+/* ── TABLE ── */
+.table-wrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+.table-toolbar{padding:16px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.search-box{flex:1;min-width:200px;position:relative}
+.search-box input{width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;transition:.2s}
+.search-box input:focus{border-color:var(--accent);background:#fff}
+.search-box .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+.filter-select{padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg)}
+th{padding:11px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf9f7}
+.thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+.thumb-empty{width:48px;height:48px;background:var(--bg);border-radius:6px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:18px}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-cat{background:#ede8e0;color:var(--muted)}
+.badge-stock-ok{background:#e8f4ec;color:var(--success)}
+.badge-stock-low{background:#fef3e8;color:var(--warn)}
+.badge-stock-out{background:#fde8e8;color:var(--danger)}
+.actions{display:flex;gap:6px}
+.empty-row td{text-align:center;padding:48px;color:var(--muted)}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.25s}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:14px;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);transform:scale(.96);transition:.25s}
+.overlay.show .modal{transform:scale(1)}
+.modal-header{padding:22px 26px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}
+.modal-header h3{font-size:16px;font-weight:500}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:4px;border-radius:5px;transition:.2s}
+.modal-close:hover{background:var(--bg);color:var(--text)}
+.modal-body{padding:22px 26px}
+.modal-footer{padding:16px 26px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:12px;font-weight:500;color:var(--muted)}
+.form-group input,.form-group textarea,.form-group select{padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;color:var(--text);outline:none;transition:.2s;background:#fff}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px;line-height:1.6}
+
+/* ── IMAGE UPLOAD ── */
+.img-upload-area{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.2s;background:var(--bg);position:relative}
+.img-upload-area:hover,.img-upload-area.dragover{border-color:var(--accent);background:#faf8f4}
+.img-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.img-preview{display:flex;align-items:center;justify-content:center;gap:14px;flex-direction:column}
+.img-preview img{max-width:120px;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+.img-upload-hint{color:var(--muted);font-size:12px;margin-top:6px}
+
+/* ── DEPLOY SECTION ── */
+.deploy-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:24px;margin-bottom:24px}
+.deploy-card h3{font-size:15px;font-weight:500;margin-bottom:6px}
+.deploy-card p{color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.7}
+.token-group{display:flex;gap:10px;align-items:flex-end}
+.token-group .form-group{flex:1}
+.step-list{counter-reset:step}
+.step-item{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)}
+.step-item:last-child{border-bottom:none}
+.step-num{min-width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.step-text{flex:1;font-size:13px;color:var(--muted);line-height:1.7;padding-top:3px}
+.log-box{background:#1e1b18;border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:#a8d8a8;min-height:80px;max-height:200px;overflow-y:auto;white-space:pre-wrap;line-height:1.7}
+.log-box .log-err{color:#f4a0a0}
+.log-box .log-info{color:#a8d8f4}
+
+/* ── IMPORT SECTION ── */
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.import-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:22px}
+.import-card h4{font-size:14px;font-weight:500;margin-bottom:8px}
+.import-card p{color:var(--muted);font-size:12px;margin-bottom:16px;line-height:1.7}
+.drop-zone{border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:.2s;background:var(--bg);position:relative}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#faf8f4}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-zone .dz-icon{font-size:28px;margin-bottom:8px}
+.drop-zone p{color:var(--muted);font-size:12px}
+
+/* ── NOTIFICATION ── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:#2c2420;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;animation:slideIn .3s ease;min-width:260px}
+.toast.success{border-left:4px solid var(--success)}
+.toast.error{border-left:4px solid var(--danger)}
+.toast.info{border-left:4px solid var(--blue)}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── DELETE CONFIRM ── */
+.confirm-modal{width:420px}
+.confirm-modal .modal-body{text-align:center;padding:32px 26px}
+.confirm-modal .warn-icon{font-size:40px;margin-bottom:12px}
+.confirm-modal p{color:var(--muted);font-size:14px;line-height:1.7}
+
+/* ── TABS ── */
+.page{display:none}.page.active{display:block}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.section-header h2{font-size:18px;font-weight:500}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  #sidebar{width:0;overflow:hidden}
+  #main{margin-left:0}
+  .form-grid{grid-template-columns:1fr}
+  .import-grid{grid-template-columns:1fr}
+  table{font-size:12px}
+}
+
+/* ── STOCK INPUT ── */
+.stock-input{width:72px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);text-align:center;outline:none;transition:.2s;background:#fff}
+.stock-input:focus{border-color:var(--accent);background:#fff}
+.stock-input:hover{border-color:var(--accent)}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--sidebar);z-index:9999;display:flex;align-items:center;justify-content:center}
+#login-screen.hidden{display:none}
+.login-box{width:360px;padding:40px;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+.login-logo{font-family:'Noto Serif TC',serif;font-size:28px;letter-spacing:4px;color:var(--dark);text-align:center;margin-bottom:4px}
+.login-sub{text-align:center;color:var(--muted);font-size:12px;letter-spacing:2px;margin-bottom:32px}
+.login-box .form-group{margin-bottom:16px}
+.login-box .form-group label{font-size:12px;font-weight:500;color:var(--muted);display:block;margin-bottom:6px}
+.login-box .form-group input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:.2s}
+.login-box .form-group input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:12px;background:var(--sidebar);color:#fff;border:none;border-radius:8px;font-size:14px;font-family:inherit;cursor:pointer;letter-spacing:2px;margin-top:8px;transition:.2s}
+.login-btn:hover{background:var(--sidebar-active)}
+.login-err{color:var(--danger);font-size:12px;text-align:center;margin-top:10px;min-height:18px}
+.login-footer{text-align:center;color:var(--muted);font-size:11px;margin-top:20px;letter-spacing:1px}
+#admin-wrap{display:none}
+#admin-wrap.show{display:flex;width:100%;min-height:100vh}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
+/* ── MISC ── */
+.text-muted{color:var(--muted)}
+.mt-4{margin-top:16px}
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.required::after{content:'*';color:var(--danger);margin-left:3px}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">居院</div>
+    <div class="login-sub">後台管理系統</div>
+    <div class="form-group">
+      <label>帳號</label>
+      <input type="text" id="login-user" placeholder="請輸入帳號" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-group">
+      <label>密碼</label>
+      <input type="password" id="login-pass" placeholder="請輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">登　入</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-footer">居院抱枕批發目錄 v2.0</div>
+  </div>
+</div>
+
+<!-- ── ADMIN CONTENT ── -->
+<div id="admin-wrap">
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-brand">
+    <h1>居院</h1>
+    <p>後台管理系統</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">管理</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="icon">📊</span> 儀表板
+    </div>
+    <div class="nav-item" onclick="showPage('products')">
+      <span class="icon">📦</span> 商品管理
+    </div>
+    <div class="nav-item" onclick="showPage('import')">
+      <span class="icon">📥</span> 匯入 / 匯出
+    </div>
+    <div class="nav-section">部署</div>
+    <div class="nav-item" onclick="showPage('deploy')">
+      <span class="icon">🚀</span> 發布到網站
+    </div>
+    <div class="nav-item" onclick="showPage('settings')">
+      <span class="icon">⚙️</span> 設定
+    </div>
+  </nav>
+  <div class="nav-item" onclick="logout()" style="color:rgba(255,100,100,.8);margin-top:4px">
+    <span class="icon">🚪</span> 登出
+  </div>
+  <div class="sidebar-footer">居院抱枕批發目錄 v2.0</div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div class="topbar">
+    <h2 id="page-title">儀表板</h2>
+    <div class="topbar-actions"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page active">
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <strong style="font-size:14px">最近新增商品</strong>
+        </div>
+        <div id="recent-table"></div>
+      </div>
+    </div>
+
+    <!-- ── PRODUCTS ── -->
+    <div id="page-products" class="page">
+      <div class="section-header">
+        <h2>商品管理</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="showPage('import')">📥 匯入</button>
+          <button class="btn btn-primary" onclick="openProductModal()">＋ 新增商品</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="搜尋型號、品名…" oninput="renderTable()">
+          </div>
+          <select class="filter-select" id="filter-cat" onchange="renderTable()">
+            <option value="">全部系列</option>
+          </select>
+          <span id="count-label" class="text-muted" style="font-size:12px;margin-left:4px"></span>
+        </div>
+        <div id="product-table-wrap" style="overflow-x:auto">
+          <table id="product-table">
+            <thead>
+              <tr>
+                <th>產品型號</th>
+                <th>類別</th>
+                <th>產品圖片</th>
+                <th>品名</th>
+                <th>商品描述</th>
+                <th>尺寸(CM)</th>
+                <th>庫存</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="product-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── IMPORT/EXPORT ── -->
+    <div id="page-import" class="page">
+      <div class="section-header"><h2>匯入 / 匯出</h2></div>
+      <div class="import-grid">
+        <div class="import-card">
+          <h4>📥 匯入 JSON</h4>
+          <p>上傳先前匯出的 <code>products.json</code>，快速還原所有商品資料（含圖片）。</p>
+          <div class="drop-zone" id="dz-json">
+            <input type="file" accept=".json" onchange="importJSON(this)">
+            <div class="dz-icon">📄</div>
+            <p>點擊或拖曳 <strong>.json</strong> 檔案至此</p>
+          </div>
+        </div>
+        <div class="import-card">
+          <h4>📊 匯入 Excel</h4>
+          <p>上傳 <code>.xlsx</code> 格式商品表（欄位：型號、類別、品名、描述、尺寸、庫存），圖片請後續逐一更新。</p>
+          <div class="drop-zone" id="dz-xlsx">
+            <input type="file" accept=".xlsx,.xls" onchange="importExcel(this)">
+            <div class="dz-icon">📊</div>
+            <p>點擊或拖曳 <strong>.xlsx</strong> 檔案至此</p>
+          </div>
+        </div>
+        <div class="import-card">
+          <h4>📤 匯出 JSON</h4>
+          <p>將所有商品資料（含 Base64 圖片）匯出為 JSON 備份檔，可於未來匯入還原。</p>
+          <button class="btn btn-primary" onclick="exportJSON()">📤 匯出 products.json</button>
+        </div>
+        <div class="import-card">
+          <h4>🗑️ 清空所有資料</h4>
+          <p>刪除本機儲存的所有商品資料。此操作無法復原，請先匯出備份。</p>
+          <button class="btn btn-danger" onclick="confirmClearAll()">🗑️ 清空所有商品</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEPLOY ── -->
+    <div id="page-deploy" class="page">
+      <div class="section-header"><h2>發布到網站</h2></div>
+      <div class="deploy-card">
+        <h3>📋 發布流程</h3>
+        <p>後台的商品資料儲存在瀏覽器本機，發布時會自動產生完整的前端網頁並推送到 GitHub Pages。</p>
+        <div class="step-item"><div class="step-num">1</div><div class="step-text">在下方輸入 GitHub Personal Access Token（需有 repo 權限）</div></div>
+        <div class="step-item"><div class="step-num">2</div><div class="step-text">確認 GitHub 帳號與 Repository 名稱正確</div></div>
+        <div class="step-item"><div class="step-num">3</div><div class="step-text">點擊「🚀 產生並發布」，系統自動產生前端 HTML 並推送</div></div>
+        <div class="step-item"><div class="step-num">4</div><div class="step-text">等待 1–2 分鐘，GitHub Pages 部署完成後瀏覽器 <code>Ctrl+Shift+R</code> 重新整理</div></div>
+      </div>
+      <div class="deploy-card">
+        <h3>⚙️ GitHub 設定</h3>
+        <p></p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>GitHub 帳號</label>
+            <input type="text" id="gh-user" value="HSH0604" readonly style="background:#f5f2ec;cursor:not-allowed;color:var(--muted)">
+          </div>
+          <div class="form-group">
+            <label>Repository 名稱</label>
+            <input type="text" id="gh-repo" value="HSH.github.io-GU-Pillow" readonly style="background:#f5f2ec;cursor:not-allowed;color:var(--muted)">
+          </div>
+          <div class="form-group form-full">
+            <label>Personal Access Token（classic，repo 權限）</label>
+            <div style="background:#f5f2ec;border:1.5px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;letter-spacing:2px;margin-bottom:6px" id="gh-token-mask">尚未設定</div>
+            <input type="password" id="gh-token-input" placeholder="輸入新 Token 以更新（留空保持不變）" autocomplete="off">
+            <small class="text-muted">🔒 Token 加密存於本機瀏覽器，到期日 2027-05-31。換電腦後需重新輸入一次。</small>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="saveGHSettings()">💾 儲存設定</button>
+          <button class="btn btn-outline" onclick="previewHTML()">👁 預覽 HTML</button>
+          <button class="btn btn-success" onclick="deployToGitHub()">🚀 產生並發布</button>
+        </div>
+      </div>
+      <div class="deploy-card">
+        <h3>📋 部署紀錄</h3>
+        <div class="log-box" id="deploy-log">等待操作…</div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div id="page-settings" class="page">
+      <div class="section-header"><h2>設定</h2></div>
+      <div class="deploy-card">
+        <h3>🏷️ 網站資訊</h3>
+        <p></p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>品牌名稱</label>
+            <input type="text" id="cfg-brand" value="居院">
+          </div>
+          <div class="form-group">
+            <label>副標題</label>
+            <input type="text" id="cfg-subtitle" value="精品抱枕批發目錄">
+          </div>
+          <div class="form-group">
+            <label>Hero 標語（中文）</label>
+            <input type="text" id="cfg-tagline" value="每一個角落，都值得被精心對待">
+          </div>
+          <div class="form-group">
+            <label>頁尾聯絡說明</label>
+            <input type="text" id="cfg-footer" value="如需訂購或查詢，請聯絡業務人員">
+          </div>
+          <div class="form-group">
+            <label>商品系列（逗號分隔）</label>
+            <input type="text" id="cfg-cats" value="簡約條紋風,奢華皮革風,拼接撞色風,手工工藝風,毛絨質感風">
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn btn-primary" onclick="saveSettings()">💾 儲存設定</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ── PRODUCT MODAL ── -->
+<div class="overlay" id="product-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">新增商品</h3>
+      <button class="modal-close" onclick="closeModal('product-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="required">商品型號</label>
+          <input type="text" id="f-id" placeholder="G-260001">
+        </div>
+        <div class="form-group">
+          <label class="required">系列 / 類別</label>
+          <select id="f-cat"></select>
+        </div>
+        <div class="form-group">
+          <label class="required">品名</label>
+          <input type="text" id="f-name" placeholder="簡約大地條紋方枕">
+        </div>
+        <div class="form-group">
+          <label>尺寸</label>
+          <input type="text" id="f-size" placeholder="50*50">
+        </div>
+        <div class="form-group form-full">
+          <label>商品描述</label>
+          <textarea id="f-desc" placeholder="商品特色說明…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>庫存數量</label>
+          <input type="number" id="f-stock" placeholder="0" min="0">
+        </div>
+        <div class="form-group form-full">
+          <label>商品圖片</label>
+          <div class="img-upload-area" id="img-drop">
+            <input type="file" accept="image/*" onchange="handleImageUpload(this)">
+            <div class="img-preview" id="img-preview-wrap">
+              <div style="font-size:36px">🖼️</div>
+              <div>點擊或拖曳圖片上傳</div>
+              <div class="img-upload-hint">自動壓縮至 800px / JPEG 80%</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;padding:10px 14px;background:#faf8f4;border:1px solid var(--sand);border-radius:8px;font-size:12px;color:var(--brown);line-height:1.9">
+            💡 <strong>圖片建議</strong><br>
+            · 格式：<strong>PNG</strong>（去背效果最佳）<br>
+            · 背景：<strong>純白色</strong>，無陰影、無漸層<br>
+            · 此處儲存原圖；發布前端網頁時自動去背
+          </div>
+          <input type="hidden" id="f-img">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('product-overlay')">取消</button>
+      <button class="btn btn-primary" onclick="saveProduct()">💾 儲存商品</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELETE CONFIRM ── -->
+<div class="overlay" id="delete-overlay">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <h3>確認刪除</h3>
+      <button class="modal-close" onclick="closeModal('delete-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warn-icon">⚠️</div>
+      <h4 style="margin-bottom:8px" id="delete-target-name"></h4>
+      <p>此操作無法復原，確定要刪除這個商品嗎？</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('delete-overlay')">取消</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">🗑️ 確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CLEAR CONFIRM ── -->
+<div class="overlay" id="clear-overlay">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <h3>清空所有資料</h3>
+      <button class="modal-close" onclick="closeModal('clear-overlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warn-icon">🗑️</div>
+      <p>將刪除所有 <strong id="clear-count"></strong> 筆商品資料，此操作無法復原！</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('clear-overlay')">取消</button>
+      <button class="btn btn-danger" onclick="doClearAll()">確認清空</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+</div><!-- /#admin-wrap -->
+
+<!-- SheetJS for Excel import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ════════════════════════════════════════════════
+//  DATA LAYER — IndexedDB（無容量限制）
+// ════════════════════════════════════════════════
+
+const STORE_KEY = 'juyuan_products';
+const CFG_KEY   = 'juyuan_config';
+const GH_KEY    = 'juyuan_github';
+
+/* ── IndexedDB 工具 ── */
+const IDB_NAME = 'juyuan_db', IDB_VER = 1;
+let _idb = null;
+function openIDB(){
+  if(_idb) return Promise.resolve(_idb);
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(IDB_NAME, IDB_VER);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+    r.onsuccess = e => { _idb = e.target.result; res(_idb); };
+    r.onerror   = () => rej(r.error);
+  });
+}
+function idbGet(key){
+  return openIDB().then(db=>new Promise((res,rej)=>{
+    const req = db.transaction('kv','readonly').objectStore('kv').get(key);
+    req.onsuccess = ()=>res(req.result);
+    req.onerror   = ()=>rej(req.error);
+  }));
+}
+function idbSet(key,val){
+  return openIDB().then(db=>new Promise((res,rej)=>{
+    const tx = db.transaction('kv','readwrite');
+    tx.objectStore('kv').put(val, key);
+    tx.oncomplete = ()=>res();
+    tx.onerror    = ()=>rej(tx.error);
+  }));
+}
+
+/* ── Products：in-memory cache + IDB ── */
+let _productsCache = [];
+
+async function loadProductsFromIDB(){
+  try{
+    const data = await idbGet(STORE_KEY);
+    if(Array.isArray(data)){ _productsCache = data; return; }
+  } catch(e){}
+  // 首次啟動：嘗試從舊版 localStorage 遷移
+  try{
+    const old = JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
+    if(old.length){
+      _productsCache = old;
+      await idbSet(STORE_KEY, old);
+      localStorage.removeItem(STORE_KEY);
+      toast(`已從舊版儲存遷移 ${old.length} 筆商品到新儲存引擎`, 'info');
+    }
+  } catch(e){}
+}
+
+function getProducts(){ return _productsCache; }
+
+function saveProducts(arr){
+  _productsCache = arr;
+  idbSet(STORE_KEY, arr).catch(e=>{
+    toast('❗ 儲存失敗：' + e.message, 'error');
+  });
+}
+function getCfg(){
+  const def = {
+    brand:'居院', subtitle:'精品抱枕批發目錄',
+    tagline:'每一個角落，都值得被精心對待',
+    footer:'如需訂購或查詢，請聯絡業務人員',
+    cats:'簡約條紋風,奢華皮革風,拼接撞色風,手工工藝風,毛絨質感風'
+  };
+  try{ return Object.assign(def, JSON.parse(localStorage.getItem(CFG_KEY)||'{}')) }catch{return def}
+}
+function saveCfg(c){ localStorage.setItem(CFG_KEY, JSON.stringify(c)) }
+function getGH(){
+  try{ return JSON.parse(localStorage.getItem(GH_KEY)||'{}') }catch{return{}}
+}
+function saveGH(o){ localStorage.setItem(GH_KEY, JSON.stringify(o)) }
+
+// ════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════
+
+const PAGE_TITLES = {
+  dashboard:'儀表板', products:'商品管理',
+  import:'匯入 / 匯出', deploy:'發布到網站', settings:'設定'
+};
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')?.includes("'"+name+"'")) n.classList.add('active');
+  });
+  document.getElementById('page-title').textContent = PAGE_TITLES[name]||name;
+  if(name==='dashboard') renderDashboard();
+  if(name==='products')  renderTable();
+  if(name==='deploy')    loadGHSettings();
+  if(name==='settings')  loadSettings();
+}
+
+// ════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════
+
+function renderDashboard(){
+  const products = getProducts();
+  const cfg = getCfg();
+  const cats = cfg.cats.split(',').map(s=>s.trim());
+  // 第一行：主要統計（固定 4 欄）
+  const row1 = `
+    <div class="stat-card"><div class="label">商品總數</div><div class="value">${products.length}</div><div class="sub">款式</div></div>
+    <div class="stat-card"><div class="label">系列數</div><div class="value">${cats.length}</div><div class="sub">系列</div></div>
+    <div class="stat-card"><div class="label">有圖片</div><div class="value">${products.filter(p=>p.img).length}</div><div class="sub">已上傳圖片</div></div>
+    <div class="stat-card"><div class="label">無庫存</div><div class="value">${products.filter(p=>!p.stock||p.stock=='0').length}</div><div class="sub">待補貨</div></div>
+  `;
+  // 第二行：各系列數量
+  const row2 = cats.map(cat=>{
+    const n = products.filter(p=>p.category===cat).length;
+    return `<div class="stat-card"><div class="label">${cat}</div><div class="value">${n}</div><div class="sub">件商品</div></div>`;
+  }).join('');
+
+  document.getElementById('stat-grid').innerHTML = `
+    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">${row1}</div>
+    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px">${row2}</div>
+  `;
+
+  // recent 5
+  const recent = [...products].slice(-5).reverse();
+  let rows = recent.map(p=>`
+    <tr>
+      <td><code style="font-size:12px">${esc(p.id)}</code></td>
+      <td><span class="badge badge-cat">${esc(p.category)}</span></td>
+      <td>${p.img?`<img class="thumb" src="${p.img}">`:`<div class="thumb-empty">🖼</div>`}</td>
+      <td>${esc(p.name)}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${esc(p.desc||'')}">${esc(p.desc||'—')}</td>
+      <td>${esc(p.size||'—')}</td>
+      <td>${stockBadge(p.stock)}</td>
+    </tr>`).join('');
+  if(!rows) rows = `<tr class="empty-row"><td colspan="7">尚無商品資料，請先新增商品。</td></tr>`;
+  document.getElementById('recent-table').innerHTML = `
+    <table><thead><tr><th>產品型號</th><th>類別</th><th>產品圖片</th><th>品名</th><th>商品描述</th><th>尺寸(CM)</th><th>庫存</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+// ════════════════════════════════════════════════
+//  PRODUCT TABLE
+// ════════════════════════════════════════════════
+
+function renderTable(){
+  const products = getProducts();
+  const q = (document.getElementById('search-input')?.value||'').toLowerCase();
+  const cat = document.getElementById('filter-cat')?.value||'';
+
+  // update category filter options
+  const catSel = document.getElementById('filter-cat');
+  if(catSel){
+    const cats = [...new Set(products.map(p=>p.category).filter(Boolean))];
+    const cur = catSel.value;
+    catSel.innerHTML = `<option value="">全部系列</option>`+cats.map(c=>`<option value="${esc(c)}" ${cur===c?'selected':''}>${esc(c)}</option>`).join('');
+  }
+
+  const filtered = products.filter(p=>{
+    if(q && !(p.id?.toLowerCase().includes(q)||p.name?.toLowerCase().includes(q))) return false;
+    if(cat && p.category!==cat) return false;
+    return true;
+  });
+
+  document.getElementById('count-label').textContent = `共 ${filtered.length} 件`;
+
+  const tbody = document.getElementById('product-tbody');
+  if(!filtered.length){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">查無符合條件的商品</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(p=>`
+    <tr>
+      <td><code style="font-size:12px">${esc(p.id)}</code></td>
+      <td><span class="badge badge-cat">${esc(p.category)}</span></td>
+      <td>${p.img?`<img class="thumb" src="${p.img}" style="cursor:pointer" onclick="previewImg('${p.id}')">`:`<div class="thumb-empty">🖼</div>`}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.name)}">${esc(p.name)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${esc(p.desc||'')}">${esc(p.desc||'—')}</td>
+      <td>${esc(p.size||'—')}</td>
+      <td><input class="stock-input" type="number" min="0" value="${esc(p.stock||'0')}" data-id="${esc(p.id)}" onchange="quickUpdateStock(this)" onclick="this.select()"></td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-accent btn-sm btn-icon" title="編輯" onclick="editProduct('${esc(p.id)}')">✏️</button>
+          <button class="btn btn-danger btn-sm btn-icon" title="刪除" onclick="openDelete('${esc(p.id)}')">🗑️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function quickUpdateStock(input){
+  const id = input.dataset.id;
+  const val = input.value.trim();
+  let products = getProducts();
+  const idx = products.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  products[idx].stock = val;
+  saveProducts(products);
+  toast(`${id} 庫存已更新為 ${val}`, 'success');
+  renderDashboard();
+}
+
+function stockBadge(s){
+  const n = parseInt(s)||0;
+  if(n===0)  return `<span class="badge badge-stock-out">缺貨</span>`;
+  if(n<10)   return `<span class="badge badge-stock-low">${n}</span>`;
+  return `<span class="badge badge-stock-ok">${n}</span>`;
+}
+
+// ════════════════════════════════════════════════
+//  PRODUCT MODAL
+// ════════════════════════════════════════════════
+
+let editingId = null;
+
+function openProductModal(prefill){
+  editingId = null;
+  document.getElementById('modal-title').textContent = '新增商品';
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-id').disabled = false;
+  document.getElementById('f-cat').innerHTML = catOptions('');
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-size').value = '';
+  document.getElementById('f-stock').value = '';
+  document.getElementById('f-img').value = '';
+  resetImgPreview();
+  if(prefill){
+    document.getElementById('f-id').value = prefill.id||'';
+    document.getElementById('f-cat').value = prefill.category||'';
+    document.getElementById('f-name').value = prefill.name||'';
+    document.getElementById('f-desc').value = prefill.desc||'';
+    document.getElementById('f-size').value = prefill.size||'';
+    document.getElementById('f-stock').value = prefill.stock||'';
+  }
+  showModal('product-overlay');
+}
+
+function editProduct(id){
+  const p = getProducts().find(x=>x.id===id);
+  if(!p) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = '編輯商品 — '+id;
+  document.getElementById('f-id').value = p.id;
+  document.getElementById('f-id').disabled = true;
+  document.getElementById('f-cat').innerHTML = catOptions(p.category);
+  document.getElementById('f-name').value = p.name||'';
+  document.getElementById('f-desc').value = p.desc||'';
+  document.getElementById('f-size').value = p.size||'';
+  document.getElementById('f-stock').value = p.stock||'';
+  document.getElementById('f-img').value = p.img||'';
+  if(p.img){
+    document.getElementById('img-preview-wrap').innerHTML =
+      `<img src="${p.img}" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
+       <div class="img-upload-hint">點擊更換圖片</div>`;
+    document.getElementById('rembg-bar').style.display = 'flex';
+    document.getElementById('rembg-status').textContent = '';
+  } else {
+    resetImgPreview();
+  }
+  showModal('product-overlay');
+}
+
+function catOptions(selected){
+  const cfg = getCfg();
+  const cats = cfg.cats.split(',').map(s=>s.trim());
+  return cats.map(c=>`<option value="${esc(c)}" ${c===selected?'selected':''}>${esc(c)}</option>`).join('');
+}
+
+function saveProduct(){
+  const id    = document.getElementById('f-id').value.trim();
+  const cat   = document.getElementById('f-cat').value;
+  const name  = document.getElementById('f-name').value.trim();
+  const desc  = document.getElementById('f-desc').value.trim();
+  const size  = document.getElementById('f-size').value.trim();
+  const stock = document.getElementById('f-stock').value.trim();
+  const img   = document.getElementById('f-img').value;
+
+  if(!id||!name){ toast('型號和品名為必填欄位', 'error'); return; }
+
+  let products = getProducts();
+
+  if(editingId){
+    const idx = products.findIndex(p=>p.id===editingId);
+    if(idx>=0) products[idx] = {id:editingId, category:cat, name, desc, size, stock, img};
+  } else {
+    if(products.find(p=>p.id===id)){ toast('型號 '+id+' 已存在！', 'error'); return; }
+    products.push({id, category:cat, name, desc, size, stock, img});
+  }
+
+  saveProducts(products);
+  closeModal('product-overlay');
+  toast(editingId ? '商品已更新' : '商品已新增', 'success');
+  renderTable();
+  renderDashboard();
+}
+
+// ════════════════════════════════════════════════
+//  DELETE
+// ════════════════════════════════════════════════
+
+let deleteTargetId = null;
+
+function openDelete(id){
+  deleteTargetId = id;
+  const p = getProducts().find(x=>x.id===id);
+  document.getElementById('delete-target-name').textContent = p?.name||id;
+  showModal('delete-overlay');
+}
+
+function confirmDelete(){
+  if(!deleteTargetId) return;
+  let products = getProducts().filter(p=>p.id!==deleteTargetId);
+  saveProducts(products);
+  closeModal('delete-overlay');
+  toast('商品已刪除', 'info');
+  renderTable();
+  renderDashboard();
+  deleteTargetId = null;
+}
+
+// ════════════════════════════════════════════════
+//  IMAGE HANDLING
+// ════════════════════════════════════════════════
+
+function handleImageUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  compressImage(file, 800, 0.82, base64=>{
+    document.getElementById('f-img').value = base64;
+    document.getElementById('img-preview-wrap').innerHTML =
+      `<img src="${base64}" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
+       <div class="img-upload-hint">已壓縮 ✓ 點擊更換</div>`;
+  });
+}
+
+/* ── Canvas 去背（Flood Fill，供 HTML 產生器呼叫）── */
+function removeBgFromBase64(base64, tolerance=40){
+  return new Promise(resolve=>{
+    if(!base64){ resolve(base64); return; }
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imageData.data;
+        const W = canvas.width, H = canvas.height;
+
+        // 取左上角像素作為背景參考色
+        const bgR=d[0], bgG=d[1], bgB=d[2];
+
+        // Flood Fill 從四個角落往內擴散
+        const visited = new Uint8Array(W * H);
+        const queue = [];
+        const seed = (x,y)=>{ const i=y*W+x; if(!visited[i]){visited[i]=1;queue.push(i);} };
+        seed(0,0); seed(W-1,0); seed(0,H-1); seed(W-1,H-1);
+
+        while(queue.length){
+          const idx = queue.pop();
+          const x = idx%W, y = (idx/W)|0;
+          const pi = idx*4;
+          const dr=d[pi]-bgR, dg=d[pi+1]-bgG, db=d[pi+2]-bgB;
+          const dist = Math.sqrt(dr*dr+dg*dg+db*db);
+          if(dist > tolerance) continue;
+          // 羽化
+          d[pi+3] = Math.round((dist/tolerance)*255);
+          if(x>0   && !visited[idx-1]){visited[idx-1]=1;queue.push(idx-1);}
+          if(x<W-1 && !visited[idx+1]){visited[idx+1]=1;queue.push(idx+1);}
+          if(y>0   && !visited[idx-W]){visited[idx-W]=1;queue.push(idx-W);}
+          if(y<H-1 && !visited[idx+W]){visited[idx+W]=1;queue.push(idx+W);}
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch(e){ resolve(base64); } // 失敗時返回原圖
+    };
+    img.onerror = ()=>resolve(base64);
+    img.src = base64;
+  });
+}
+
+function compressImage(file, maxPx, quality, cb){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if(Math.max(w,h)>maxPx){
+        const r = maxPx/Math.max(w,h);
+        w = Math.round(w*r); h = Math.round(h*r);
+      }
+      canvas.width=w; canvas.height=h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      cb(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetImgPreview(){
+  document.getElementById('img-preview-wrap').innerHTML =
+    `<div style="font-size:36px">🖼️</div>
+     <div>點擊或拖曳圖片上傳</div>
+     <div class="img-upload-hint">自動壓縮至 800px / JPEG 80%</div>`;
+}
+
+function previewImg(id){
+  const p = getProducts().find(x=>x.id===id);
+  if(!p?.img) return;
+  const w = window.open('');
+  w.document.write(`<body style="margin:0;background:#1e1b18;display:flex;align-items:center;justify-content:center;min-height:100vh">
+    <img src="${p.img}" style="max-width:90vw;max-height:90vh;border-radius:8px"></body>`);
+}
+
+// ════════════════════════════════════════════════
+//  IMPORT / EXPORT
+// ════════════════════════════════════════════════
+
+// 重複料號提示視窗
+function showDuplicateAlert(duplicates, source){
+  const list = duplicates.map(id=>`<li style="font-family:monospace;color:#c0392b;font-size:13px">${esc(id)}</li>`).join('');
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:14px;max-width:480px;width:95vw;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+      <div style="background:#c0392b;padding:18px 24px;color:#fff">
+        <div style="font-size:18px;font-weight:500">⚠️ 匯入失敗</div>
+        <div style="font-size:12px;margin-top:4px;opacity:.85">${source} 中發現重複商品料號</div>
+      </div>
+      <div style="padding:20px 24px">
+        <p style="font-size:13px;color:#7a6355;margin-bottom:12px">以下料號已存在於系統中，<strong>請修正後重新上傳</strong>：</p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;background:#fdf0f0;border-radius:8px;padding:12px 16px">
+          ${list}
+        </ul>
+        <p style="font-size:12px;color:#b5a898;margin-top:12px">共 <strong>${duplicates.length}</strong> 筆重複，本次匯入已全部取消，現有資料不受影響。</p>
+      </div>
+      <div style="padding:12px 24px 20px;display:flex;justify-content:flex-end">
+        <button onclick="this.closest('div[style]').remove()" style="background:#2c2420;color:#fff;border:none;padding:10px 24px;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit">確認</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+function importJSON(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error('格式不正確');
+
+      // 重複料號檢查：匯入資料 vs 現有資料
+      const existing = getProducts();
+      const existingIds = new Set(existing.map(p=>p.id));
+      const duplicates = data.map(p=>p.id).filter(id=>existingIds.has(id));
+
+      if(duplicates.length > 0){
+        showDuplicateAlert(duplicates, 'JSON 檔案');
+        input.value = ''; // 清除已選檔案
+        return;
+      }
+
+      saveProducts(data);
+      toast(`已匯入 ${data.length} 筆商品`, 'success');
+      renderDashboard();
+    } catch(err){ toast('JSON 格式錯誤：'+err.message, 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+function importExcel(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1,defval:''});
+      if(rows.length<2){ toast('Excel 沒有資料列', 'error'); return; }
+      const headers = rows[0].map(h=>String(h).trim().toLowerCase());
+      const colMap = {};
+      headers.forEach((h,i)=>{
+        if(h.includes('型號')||h.includes('id')||h.includes('編號')) colMap.id=i;
+        else if(h.includes('類別')||h.includes('系列')||h.includes('category')) colMap.category=i;
+        else if(h.includes('品名')||h.includes('name')) colMap.name=i;
+        else if(h.includes('描述')||h.includes('desc')) colMap.desc=i;
+        else if(h.includes('尺寸')||h.includes('size')) colMap.size=i;
+        else if(h.includes('庫存')||h.includes('數量')||h.includes('stock')) colMap.stock=i;
+      });
+      const incoming = [];
+      for(let i=1;i<rows.length;i++){
+        const r=rows[i];
+        const id = String(r[colMap.id??0]||'').trim();
+        if(!id) continue;
+        incoming.push({
+          id, category:String(r[colMap.category??1]||'').trim(),
+          name:String(r[colMap.name??2]||'').trim(),
+          desc:String(r[colMap.desc??3]||'').trim(),
+          size:String(r[colMap.size??4]||'').trim(),
+          stock:String(r[colMap.stock??5]||'').trim(),
+          img:''
+        });
+      }
+
+      // 重複料號檢查：Excel 資料 vs 現有資料
+      const existing = getProducts();
+      const existingIds = new Set(existing.map(p=>p.id));
+      const duplicates = incoming.map(p=>p.id).filter(id=>existingIds.has(id));
+
+      if(duplicates.length > 0){
+        showDuplicateAlert(duplicates, 'Excel 檔案');
+        input.value = ''; // 清除已選檔案
+        return;
+      }
+
+      // 無重複，全部新增
+      const merged = [...existing, ...incoming];
+      saveProducts(merged);
+      toast(`Excel 匯入完成：新增 ${incoming.length} 筆`, 'success');
+      renderDashboard();
+    } catch(err){ toast('Excel 匯入失敗：'+err.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportJSON(){
+  const products = getProducts();
+  const blob = new Blob([JSON.stringify(products, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `products_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('已匯出 products.json', 'success');
+}
+
+function confirmClearAll(){
+  document.getElementById('clear-count').textContent = getProducts().length;
+  showModal('clear-overlay');
+}
+
+function doClearAll(){
+  saveProducts([]);
+  idbSet(STORE_KEY, []);
+  closeModal('clear-overlay');
+  toast('已清空所有商品資料', 'info');
+  renderDashboard();
+  renderTable();
+}
+
+// ════════════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════════════
+
+function loadSettings(){
+  const c = getCfg();
+  document.getElementById('cfg-brand').value   = c.brand;
+  document.getElementById('cfg-subtitle').value= c.subtitle;
+  document.getElementById('cfg-tagline').value = c.tagline;
+  document.getElementById('cfg-footer').value  = c.footer;
+  document.getElementById('cfg-cats').value    = c.cats;
+}
+
+function saveSettings(){
+  saveCfg({
+    brand:   document.getElementById('cfg-brand').value.trim(),
+    subtitle:document.getElementById('cfg-subtitle').value.trim(),
+    tagline: document.getElementById('cfg-tagline').value.trim(),
+    footer:  document.getElementById('cfg-footer').value.trim(),
+    cats:    document.getElementById('cfg-cats').value.trim()
+  });
+  toast('設定已儲存', 'success');
+}
+
+function loadGHSettings(){
+  const g = getGH();
+  if(g.user) document.getElementById('gh-user').value = g.user;
+  if(g.repo) document.getElementById('gh-repo').value = g.repo;
+  renderTokenMask();
+}
+
+function saveGHSettings(){
+  const token = document.getElementById('gh-token-input').value.trim();
+  saveGH({
+    user:  document.getElementById('gh-user').value.trim(),
+    repo:  document.getElementById('gh-repo').value.trim(),
+    token: token || getGH().token || ''
+  });
+  if(token) document.getElementById('gh-token-input').value = '';
+  renderTokenMask();
+  toast('GitHub 設定已儲存', 'success');
+}
+
+function renderTokenMask(){
+  const t = getGH().token || '';
+  const el = document.getElementById('gh-token-mask');
+  if(!el) return;
+  if(t) {
+    const last4 = t.slice(-4);
+    el.textContent = '●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●' + last4;
+    el.style.color = 'var(--muted)';
+  } else {
+    el.textContent = '尚未設定';
+    el.style.color = 'var(--danger)';
+  }
+}
+
+// ════════════════════════════════════════════════
+//  HTML GENERATION
+// ════════════════════════════════════════════════
+
+async function generateHTML(onProgress){
+  const rawProducts = getProducts();
+  // 對每張圖去背
+  const products = [];
+  for(let i=0; i<rawProducts.length; i++){
+    const p = rawProducts[i];
+    if(onProgress) onProgress(i+1, rawProducts.length, p.id);
+    products.push({ ...p, img: p.img ? await removeBgFromBase64(p.img) : p.img });
+  }
+  const cfg = getCfg();
+  const cats = cfg.cats.split(',').map(s=>s.trim()).filter(Boolean);
+
+  const total = products.length;
+  const catCount = [...new Set(products.map(p=>p.category).filter(Boolean))].length;
+
+  // filter buttons 含各系列數量
+  const filterBtns = cats.map(c=>{
+    const n = products.filter(p=>p.category===c).length;
+    return `<button class="filter-btn" onclick="filter('${escJS(c)}',this)">${esc(c)}（${n}）</button>`;
+  }).join('\n  ');
+
+  // 商品卡片，每個系列一個 section
+  const sectionsHTML = cats.map(cat=>{
+    const items = products.filter(p=>p.category===cat);
+    if(!items.length) return '';
+    const cards = items.map(p=>{
+      const stockText = (parseInt(p.stock)||0)===0 ? '缺貨' : `庫存 ${p.stock}`;
+      const imgTag = p.img
+        ? `<img src="${p.img}" alt="${esc(p.name)}" loading="lazy">`
+        : `<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="${esc(p.name)}">`;
+      const dataJson = JSON.stringify({id:p.id, name:p.name, cat:p.category, desc:p.desc||'', size:p.size||'', stock:p.stock||'0'});
+      return `    <div class="card" onclick="openLb(this)">
+      <div class="card-img">${imgTag}</div>
+      <div class="card-body">
+        <div class="card-id">${esc(p.id)}</div>
+        <div class="card-name">${esc(p.name)}</div>
+        <div class="card-desc">${esc(p.desc||'')}</div>
+      </div>
+      <div class="card-footer">
+        <span class="tag">${esc(p.size||'')} cm</span>
+        <span class="tag">${esc(stockText)}</span>
+      </div>
+      <script type="application/json" class="card-data">${dataJson}<\/script>
+    </div>`;
+    }).join('\n');
+
+    return `<section class="cat-section show" data-cat="${esc(cat)}">
+  <div class="cat-header">
+    <span class="cat-title">${esc(cat)}</span>
+    <div class="cat-line"></div>
+    <span class="cat-count">${items.length} 款</span>
+  </div>
+  <div class="grid">
+${cards}
+  </div>
+</section>`;
+  }).join('\n\n');
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(cfg.brand)} — ${esc(cfg.subtitle)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* 字體規範
+   品牌英文標題 : Cormorant Garamond（優雅古典襯線，精品感）
+   中文標題、品名 : Noto Serif TC（宋體，沉穩有質感）
+   內文 / UI : Noto Sans TC（黑體，清晰易讀）
+   字重規範  : 300 細體內文 / 400 正常 / 500 大標題
+*/
+:root {
+  --cream: #faf8f4; --warm-white: #f5f2ec; --sand: #e8e0d4;
+  --taupe: #b5a898; --brown: #7a6355; --dark: #2c2420; --accent: #9b8470;
+  --img-bg: #ede8e0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans TC',sans-serif; font-weight:300; background:var(--cream); color:var(--dark); }
+header { background:var(--dark); color:var(--cream); padding:0 48px; height:72px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.logo-en { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:400; letter-spacing:8px; }
+.logo-zh { font-family:'Noto Serif TC',serif; font-size:11px; letter-spacing:4px; color:var(--taupe); margin-top:3px; }
+.header-right { font-size:11px; letter-spacing:3px; color:var(--taupe); text-align:right; }
+.hero { background:var(--warm-white); padding:64px 48px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--sand); gap:48px; }
+.hero h1 { font-family:'Cormorant Garamond',serif; font-size:52px; font-weight:300; line-height:1.15; }
+.hero h1 em { font-style:italic; color:var(--accent); }
+.hero p { margin-top:16px; font-size:13px; line-height:2; color:var(--brown); max-width:380px; }
+.hero-stats { display:flex; gap:1px; background:var(--sand); border:1px solid var(--sand); flex-shrink:0; }
+.stat { background:var(--cream); padding:28px 32px; text-align:center; }
+.stat-num { display:block; font-family:'Cormorant Garamond',serif; font-size:38px; font-weight:300; }
+.stat-label { display:block; font-size:10px; letter-spacing:2px; color:var(--taupe); margin-top:4px; }
+.filter-bar { padding:0 48px; display:flex; border-bottom:1px solid var(--sand); overflow-x:auto; }
+.filter-btn { background:none; border:none; border-bottom:2px solid transparent; padding:18px 22px; font-family:'Noto Sans TC',sans-serif; font-size:12px; font-weight:300; letter-spacing:2px; color:var(--taupe); cursor:pointer; white-space:nowrap; transition:all .2s; }
+.filter-btn:hover { color:var(--dark); }
+.filter-btn.active { color:var(--dark); border-bottom-color:var(--dark); }
+.catalog { padding:48px 48px 80px; }
+.cat-section { margin-bottom:56px; display:none; }
+.cat-section.show { display:block; }
+.cat-header { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+.cat-title { font-family:'Noto Serif TC',serif; font-size:13px; letter-spacing:4px; color:var(--brown); white-space:nowrap; }
+.cat-line { flex:1; height:1px; background:var(--sand); }
+.cat-count { font-size:11px; color:var(--taupe); letter-spacing:1px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:2px; background:var(--cream); }
+.card { background:var(--cream); cursor:pointer; transition:transform .3s; overflow:hidden; display:flex; flex-direction:column; }
+.card:hover { transform:translateY(-4px); z-index:1; }
+.card:hover .card-img img { transform:scale(1.05); }
+.card-img { aspect-ratio:1/1; overflow:hidden; background:var(--img-bg); display:flex; align-items:center; justify-content:center; padding:16px; }
+.card-img img { width:100%; height:100%; object-fit:contain; transition:transform .5s; mix-blend-mode:multiply; filter:contrast(1.02) saturate(1.05); }
+.card-body { padding:18px 20px 10px; flex:1; }
+.card-id { font-size:10px; letter-spacing:3px; color:var(--taupe); margin-bottom:5px; }
+.card-name { font-family:'Noto Serif TC',serif; font-size:15px; font-weight:400; color:var(--dark); margin-bottom:7px; line-height:1.4; }
+.card-desc { font-size:11px; color:var(--brown); line-height:1.8; }
+.card-footer { padding:10px 20px 18px; display:flex; align-items:center; justify-content:flex-start; gap:6px; flex-wrap:wrap; }
+.tag { font-size:10px; letter-spacing:1px; color:var(--accent); padding:3px 8px; border:1px solid var(--sand); }
+.lb-overlay { display:none; position:fixed; inset:0; background:rgba(20,16,14,.9); z-index:200; align-items:center; justify-content:center; padding:32px; }
+.lb-overlay.open { display:flex; }
+.lb-box { background:var(--cream); max-width:820px; width:100%; display:grid; grid-template-columns:1fr 1fr; max-height:88vh; overflow:hidden; animation:fadeUp .3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.lb-img { background:var(--img-bg); overflow:hidden; display:flex; align-items:center; justify-content:center; padding:24px; }
+.lb-img img { width:100%; height:100%; object-fit:contain; mix-blend-mode:multiply; filter:contrast(1.02) saturate(1.05); }
+.lb-info { padding:40px 36px; display:flex; flex-direction:column; overflow-y:auto; }
+#lb-id { font-size:10px; letter-spacing:3px; color:var(--taupe); }
+#lb-name { font-family:'Noto Serif TC',serif; font-size:20px; color:var(--dark); margin:10px 0 6px; line-height:1.4; }
+#lb-cat { font-size:11px; letter-spacing:2px; color:var(--accent); margin-bottom:20px; }
+.lb-divider { width:32px; height:1px; background:var(--sand); margin-bottom:18px; }
+.lb-specs { display:grid; grid-template-columns:auto 1fr; gap:8px 16px; margin-bottom:18px; font-size:12px; }
+.lb-spec-label { color:var(--taupe); letter-spacing:1px; }
+.lb-spec-val { color:var(--dark); font-weight:400; }
+#lb-desc { font-size:13px; color:var(--brown); line-height:2; flex:1; }
+.lb-close { margin-top:24px; align-self:flex-start; background:var(--dark); color:var(--cream); border:none; padding:10px 22px; font-family:'Noto Sans TC',sans-serif; font-size:11px; letter-spacing:3px; cursor:pointer; transition:background .2s; }
+.lb-close:hover { background:var(--brown); }
+footer { background:var(--dark); color:var(--taupe); padding:40px 48px; display:flex; justify-content:space-between; align-items:center; }
+.footer-brand { font-family:'Cormorant Garamond',serif; font-size:20px; letter-spacing:6px; color:var(--cream); }
+.footer-note { font-size:11px; letter-spacing:1px; line-height:1.9; text-align:right; }
+@media(max-width:768px){
+  header,.filter-bar,.catalog,.hero,footer{padding-left:20px;padding-right:20px;}
+  .hero{flex-direction:column;padding-top:40px;padding-bottom:40px;}
+  .hero h1{font-size:36px;} .hero-stats{width:100%;}
+  .lb-box{grid-template-columns:1fr;} .lb-img{aspect-ratio:4/3;}
+  footer{flex-direction:column;gap:16px;} .footer-note{text-align:center;}
+}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-en">${esc(cfg.brand)}</div><div class="logo-zh">${esc(cfg.subtitle)}</div></div>
+  <div class="header-right">Wholesale Collection<br>2025</div>
+</header>
+<section class="hero">
+  <div>
+    <h1>${esc(cfg.brand)}<em>抱枕</em><br>批發系列</h1>
+    <p>${esc(cfg.tagline)}</p>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-num">${total}</span><span class="stat-label">款式</span></div>
+    <div class="stat"><span class="stat-num">${catCount}</span><span class="stat-label">系列</span></div>
+    <div class="stat"><span class="stat-num">優</span><span class="stat-label">品質</span></div>
+  </div>
+</section>
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="filter('all',this)">全部系列</button>
+  ${filterBtns}
+</div>
+<main class="catalog">
+${sectionsHTML}
+</main>
+<div class="lb-overlay" id="lb" onclick="closeLbOverlay(event)">
+  <div class="lb-box">
+    <div class="lb-img"><img id="lb-img" src="" alt=""></div>
+    <div class="lb-info">
+      <div id="lb-id"></div>
+      <div id="lb-name"></div>
+      <div id="lb-cat"></div>
+      <div class="lb-divider"></div>
+      <div class="lb-specs">
+        <span class="lb-spec-label">尺寸</span><span class="lb-spec-val" id="lb-size"></span>
+        <span class="lb-spec-label">庫存</span><span class="lb-spec-val" id="lb-stock"></span>
+      </div>
+      <div id="lb-desc"></div>
+      <button class="lb-close" onclick="closeLb()">關閉 ✕</button>
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="footer-brand">${esc(cfg.brand)}</div>
+  <div class="footer-note">${esc(cfg.footer)}</div>
+</footer>
+<script>
+function filter(cat, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.cat-section').forEach(s => {
+    s.classList.toggle('show', cat === 'all' || s.dataset.cat === cat);
+  });
+}
+function openLb(card) {
+  const d = JSON.parse(card.querySelector('.card-data').textContent);
+  const img = card.querySelector('.card-img img').src;
+  document.getElementById('lb-id').textContent = d.id;
+  document.getElementById('lb-name').textContent = d.name;
+  document.getElementById('lb-cat').textContent = '系列：' + d.cat;
+  document.getElementById('lb-desc').textContent = d.desc;
+  document.getElementById('lb-size').textContent = d.size + ' cm';
+  document.getElementById('lb-stock').textContent = d.stock + ' 件';
+  document.getElementById('lb-img').src = img;
+  document.getElementById('lb-img').alt = d.name;
+  document.getElementById('lb').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLb() {
+  document.getElementById('lb').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeLbOverlay(e) { if(e.target===document.getElementById('lb')) closeLb(); }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeLb(); });
+<\/script>
+</body>
+</html>`;
+}
+
+function stockTag(s){
+  const n = parseInt(s)||0;
+  if(n===0)  return `<span class="tag-out">缺貨</span>`;
+  if(n<10)   return `<span class="tag-low">${n} 件</span>`;
+  return `<span class="tag-ok">${n} 件</span>`;
+}
+
+// ════════════════════════════════════════════════
+//  PREVIEW
+// ════════════════════════════════════════════════
+
+async function previewHTML(){
+  toast('⏳ 正在去背並產生預覽…', 'info');
+  const html = await generateHTML((cur,total,id)=>{
+    document.title = `去背 ${cur}/${total} ${id}`;
+  });
+  document.title = '居院 — 後台管理系統';
+  const blob = new Blob([html], {type:'text/html'});
+  window.open(URL.createObjectURL(blob), '_blank');
+}
+
+// ════════════════════════════════════════════════
+//  GITHUB DEPLOY
+// ════════════════════════════════════════════════
+
+function log(msg, type=''){
+  const box = document.getElementById('deploy-log');
+  const cls = type==='err'?'log-err':type==='info'?'log-info':'';
+  box.innerHTML += (cls?`<span class="${cls}">`:'') + msg + (cls?'</span>':'') + '\n';
+  box.scrollTop = box.scrollHeight;
+}
+
+async function deployToGitHub(){
+  const g = getGH();
+  g.user = document.getElementById('gh-user').value.trim() || g.user;
+  g.repo = document.getElementById('gh-repo').value.trim() || g.repo;
+  if(!g.token){ toast('請先在設定中輸入 GitHub Token', 'error'); return; }
+
+  const box = document.getElementById('deploy-log');
+  box.innerHTML = '';
+  log(`[${new Date().toLocaleTimeString()}] 開始去背處理…`, 'info');
+  const htmlContent = await generateHTML((cur,total,id)=>{
+    log(`去背 ${cur}/${total}：${id}`);
+  });
+  log(`✅ 全部 ${getProducts().length} 張圖去背完成`, 'info');
+  log(`開始部署…`, 'info');
+  log(`目標：${g.user}/${g.repo}`);
+
+  const headers = {
+    'Authorization': 'token '+g.token,
+    'Content-Type': 'application/json',
+    'User-Agent': 'JuYuan-Admin/2.0'
+  };
+
+  try {
+    // 取得現有 SHA
+    log('取得檔案 SHA…');
+    const getRes = await fetch(
+      `https://api.github.com/repos/${g.user}/${g.repo}/contents/index.html`,
+      { headers }
+    );
+    let sha = null;
+    if(getRes.ok){
+      const info = await getRes.json();
+      sha = info.sha;
+      log(`目前 SHA：${sha.slice(0,8)}…`);
+    } else if(getRes.status===404){
+      log('index.html 尚不存在，將建立新檔案', 'info');
+    } else {
+      const err = await getRes.json();
+      throw new Error(err.message||getRes.status);
+    }
+
+    // 上傳
+    log('正在上傳 index.html…');
+    const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
+    const body = {
+      message: `更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`,
+      content: encoded,
+      branch: 'main'
+    };
+    if(sha) body.sha = sha;
+
+    const putRes = await fetch(
+      `https://api.github.com/repos/${g.user}/${g.repo}/contents/index.html`,
+      { method:'PUT', headers, body:JSON.stringify(body) }
+    );
+
+    if(!putRes.ok){
+      const err = await putRes.json();
+      throw new Error(err.message||putRes.status);
+    }
+
+    const result = await putRes.json();
+    log(`✅ 上傳成功！Commit SHA：${result.commit?.sha?.slice(0,8)}…`, 'info');
+    log(`🌐 網址：https://${g.user}.github.io/${g.repo}/`);
+    log('請等待 1–2 分鐘後，按 Ctrl+Shift+R 強制重新整理。');
+    toast('發布成功！', 'success');
+
+  } catch(err){
+    log(`❌ 發布失敗：${err.message}`, 'err');
+    toast('發布失敗：'+err.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════
+//  MODAL HELPERS
+// ════════════════════════════════════════════════
+
+function showModal(id){ document.getElementById(id).classList.add('show') }
+function closeModal(id){ document.getElementById(id).classList.remove('show') }
+
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('show') });
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape') document.querySelectorAll('.overlay.show').forEach(o=>o.classList.remove('show'));
+});
+
+// ════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════
+
+function toast(msg, type='info'){
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = {success:'✅', error:'❌', info:'ℹ️'};
+  el.innerHTML = `<span>${icons[type]||'•'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+// ════════════════════════════════════════════════
+//  UTILITIES
+// ════════════════════════════════════════════════
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function escJS(s){ return String(s||'').replace(/'/g,"\\'").replace(/\\/g,'\\\\') }
+
+// drag-over highlight
+document.querySelectorAll('.drop-zone,.img-upload-area').forEach(z=>{
+  z.addEventListener('dragover', e=>{ e.preventDefault(); z.classList.add('dragover') });
+  z.addEventListener('dragleave', ()=>z.classList.remove('dragover'));
+  z.addEventListener('drop', ()=>z.classList.remove('dragover'));
+});
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════════
+
+const ADMIN_USER = 'WMG001';
+const ADMIN_PASS = '0926350647';
+// 首次使用：預設寫入 GitHub repo 設定（Token 需第一次手動輸入）
+(function seedGH(){
+  const g = getGH();
+  if(!g.user) saveGH({ user:'HSH0604', repo:'HSH.github.io-GU-Pillow', token:'' });
+})();
+const SESSION_KEY = 'juyuan_auth';
+
+function doLogin(){
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+
+  if(user === ADMIN_USER && pass === ADMIN_PASS){
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('admin-wrap').classList.add('show');
+    errEl.textContent = '';
+    loadProductsFromIDB().then(()=>renderDashboard());
+  } else {
+    errEl.textContent = '帳號或密碼錯誤，請重新輸入';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+  }
+}
+
+function logout(){
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('admin-wrap').classList.remove('show');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('login-user').focus();
+}
+
+(async function init(){
+  // 檢查是否已登入（同一瀏覽器 session）
+  if(sessionStorage.getItem(SESSION_KEY) === '1'){
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('admin-wrap').classList.add('show');
+    await loadProductsFromIDB();
+    renderDashboard();
+  } else {
+    document.getElementById('login-user').focus();
+  }
+})();
+</script>
+</body>
+</html>
+`;
