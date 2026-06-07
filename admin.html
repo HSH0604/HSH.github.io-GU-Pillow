@@ -1412,13 +1412,19 @@ async function deployToGitHub(){
     if(sha) log(`目前 SHA：${sha.slice(0,8)}…`);
     else log('index.html 尚不存在，將建立新檔案', 'info');
 
-    // 上傳
+    // 上傳（使用 upload_raw：瀏覽器送原始 HTML，伺服器端做 base64，避免超過大小限制）
     log('正在上傳 index.html…');
-    const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
-    const msg = `更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`;
-    const { ok, data } = await proxyUpload('index.html', encoded, msg, sha);
+    const msg = encodeURIComponent(`更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`);
+    const shaParam = sha ? `&sha=${sha}` : '';
+    const uploadUrl = `${PROXY_URL}?action=upload_raw&file=index.html&msg=${msg}${shaParam}`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { 'x-admin-key': PROXY_KEY, 'Content-Type': 'text/plain; charset=utf-8' },
+      body: htmlContent
+    });
+    const data = await res.json();
 
-    if(!ok) throw new Error(data.message || '上傳失敗');
+    if(!res.ok) throw new Error(data.message || data.error || '上傳失敗');
 
     log(`✅ 上傳成功！Commit：${data.commit?.sha?.slice(0,8)||'—'}`, 'info');
     log(`🌐 網址：https://HSH0604.github.io/HSH.github.io-GU-Pillow/`);
