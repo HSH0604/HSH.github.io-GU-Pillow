@@ -1401,7 +1401,7 @@ async function deployToGitHub(){
   box.innerHTML = '';
   log(`[${new Date().toLocaleTimeString()}] 開始產生網頁…`, 'info');
 
-  const htmlContent = generateHTML();
+  const htmlContent = await generateHTML();
   log(`✅ 網頁產生完成（${(htmlContent.length/1024).toFixed(0)} KB）`, 'info');
   log('透過安全代理伺服器上傳到 GitHub…');
 
