@@ -372,14 +372,13 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
             <input type="text" id="gh-repo" value="HSH.github.io-GU-Pillow" readonly style="background:#f5f2ec;cursor:not-allowed;color:var(--muted)">
           </div>
           <div class="form-group form-full">
-            <label>Personal Access Token（classic，repo 權限）</label>
-            <div style="background:#f5f2ec;border:1.5px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;letter-spacing:2px;margin-bottom:6px" id="gh-token-mask">尚未設定</div>
-            <input type="password" id="gh-token-input" placeholder="輸入新 Token 以更新（留空保持不變）" autocomplete="off">
-            <small class="text-muted">🔒 Token 加密存於本機瀏覽器，到期日 2027-05-31。換電腦後需重新輸入一次。</small>
+            <label>發布狀態</label>
+            <div style="background:#e8f4ec;border:1.5px solid #b8ddc8;border-radius:7px;padding:10px 14px;font-size:13px;color:#3a7a4a;display:flex;align-items:center;gap:8px">
+              🔒 已透過安全伺服器代理發布，無需設定 Token
+            </div>
           </div>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-outline" onclick="saveGHSettings()">💾 儲存設定</button>
           <button class="btn btn-outline" onclick="previewHTML()">👁 預覽 HTML</button>
           <button class="btn btn-success" onclick="deployToGitHub()">🚀 產生並發布</button>
         </div>
@@ -1117,38 +1116,8 @@ function saveSettings(){
   toast('設定已儲存', 'success');
 }
 
-function loadGHSettings(){
-  const g = getGH();
-  if(g.user) document.getElementById('gh-user').value = g.user;
-  if(g.repo) document.getElementById('gh-repo').value = g.repo;
-  renderTokenMask();
-}
-
-function saveGHSettings(){
-  const token = document.getElementById('gh-token-input').value.trim();
-  saveGH({
-    user:  document.getElementById('gh-user').value.trim(),
-    repo:  document.getElementById('gh-repo').value.trim(),
-    token: token || getGH().token || ''
-  });
-  if(token) document.getElementById('gh-token-input').value = '';
-  renderTokenMask();
-  toast('GitHub 設定已儲存', 'success');
-}
-
-function renderTokenMask(){
-  const t = getGH().token || '';
-  const el = document.getElementById('gh-token-mask');
-  if(!el) return;
-  if(t) {
-    const last4 = t.slice(-4);
-    el.textContent = '●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●' + last4;
-    el.style.color = 'var(--muted)';
-  } else {
-    el.textContent = '尚未設定';
-    el.style.color = 'var(--danger)';
-  }
-}
+function loadGHSettings(){} // 無需讀取設定，改用 Supabase Proxy
+function saveGHSettings(){}
 
 // ════════════════════════════════════════════════
 //  HTML GENERATION
@@ -1406,70 +1375,53 @@ function log(msg, type=''){
   box.scrollTop = box.scrollHeight;
 }
 
-async function deployToGitHub(){
-  const g = getGH();
-  g.user = document.getElementById('gh-user').value.trim() || g.user;
-  g.repo = document.getElementById('gh-repo').value.trim() || g.repo;
-  if(!g.token){ toast('請先在設定中輸入 GitHub Token', 'error'); return; }
+// ── Supabase Proxy 設定（Token 存於伺服器，不在瀏覽器）──
+const PROXY_URL  = 'https://pbnqwhzpbykndybpiesc.supabase.co/functions/v1/github-proxy';
+const PROXY_KEY  = 'Br8SbemsyLR5bjmhXEPRDkh7ghjF88eW';
 
+async function proxyGetSHA(filePath){
+  const res = await fetch(`${PROXY_URL}?action=get_sha&file=${encodeURIComponent(filePath)}`,
+    { headers:{'x-admin-key': PROXY_KEY} });
+  return (await res.json()).sha || null;
+}
+
+async function proxyUpload(filePath, content, message, sha){
+  const body = { file_path: filePath, content, message };
+  if(sha) body.sha = sha;
+  const res = await fetch(`${PROXY_URL}?action=upload`,{
+    method: 'POST',
+    headers: {'x-admin-key': PROXY_KEY, 'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
+async function deployToGitHub(){
   const box = document.getElementById('deploy-log');
   box.innerHTML = '';
-  log(`[${new Date().toLocaleTimeString()}] 開始去背處理…`, 'info');
-  const htmlContent = await generateHTML((cur,total,id)=>{
-    log(`去背 ${cur}/${total}：${id}`);
-  });
-  log(`✅ 全部 ${getProducts().length} 張圖去背完成`, 'info');
-  log(`開始部署…`, 'info');
-  log(`目標：${g.user}/${g.repo}`);
+  log(`[${new Date().toLocaleTimeString()}] 開始產生網頁…`, 'info');
 
-  const headers = {
-    'Authorization': 'token '+g.token,
-    'Content-Type': 'application/json',
-    'User-Agent': 'JuYuan-Admin/2.0'
-  };
+  const htmlContent = generateHTML();
+  log(`✅ 網頁產生完成（${(htmlContent.length/1024).toFixed(0)} KB）`, 'info');
+  log('透過安全代理伺服器上傳到 GitHub…');
 
   try {
     // 取得現有 SHA
     log('取得檔案 SHA…');
-    const getRes = await fetch(
-      `https://api.github.com/repos/${g.user}/${g.repo}/contents/index.html`,
-      { headers }
-    );
-    let sha = null;
-    if(getRes.ok){
-      const info = await getRes.json();
-      sha = info.sha;
-      log(`目前 SHA：${sha.slice(0,8)}…`);
-    } else if(getRes.status===404){
-      log('index.html 尚不存在，將建立新檔案', 'info');
-    } else {
-      const err = await getRes.json();
-      throw new Error(err.message||getRes.status);
-    }
+    const sha = await proxyGetSHA('index.html');
+    if(sha) log(`目前 SHA：${sha.slice(0,8)}…`);
+    else log('index.html 尚不存在，將建立新檔案', 'info');
 
     // 上傳
     log('正在上傳 index.html…');
     const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
-    const body = {
-      message: `更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`,
-      content: encoded,
-      branch: 'main'
-    };
-    if(sha) body.sha = sha;
+    const msg = `更新商品目錄 (${new Date().toLocaleDateString('zh-TW')})`;
+    const { ok, data } = await proxyUpload('index.html', encoded, msg, sha);
 
-    const putRes = await fetch(
-      `https://api.github.com/repos/${g.user}/${g.repo}/contents/index.html`,
-      { method:'PUT', headers, body:JSON.stringify(body) }
-    );
+    if(!ok) throw new Error(data.message || '上傳失敗');
 
-    if(!putRes.ok){
-      const err = await putRes.json();
-      throw new Error(err.message||putRes.status);
-    }
-
-    const result = await putRes.json();
-    log(`✅ 上傳成功！Commit SHA：${result.commit?.sha?.slice(0,8)}…`, 'info');
-    log(`🌐 網址：https://${g.user}.github.io/${g.repo}/`);
+    log(`✅ 上傳成功！Commit：${data.commit?.sha?.slice(0,8)||'—'}`, 'info');
+    log(`🌐 網址：https://HSH0604.github.io/HSH.github.io-GU-Pillow/`);
     log('請等待 1–2 分鐘後，按 Ctrl+Shift+R 強制重新整理。');
     toast('發布成功！', 'success');
 
@@ -1530,11 +1482,7 @@ document.querySelectorAll('.drop-zone,.img-upload-area').forEach(z=>{
 
 const ADMIN_USER = 'WMG001';
 const ADMIN_PASS = '0926350647';
-// 首次使用：預設寫入 GitHub repo 設定（Token 需第一次手動輸入）
-(function seedGH(){
-  const g = getGH();
-  if(!g.user) saveGH({ user:'HSH0604', repo:'HSH.github.io-GU-Pillow', token:'' });
-})();
+// Proxy 模式：不需要任何本機 Token 設定
 const SESSION_KEY = 'juyuan_auth';
 
 function doLogin(){
