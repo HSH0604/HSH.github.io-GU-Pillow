@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>居院 — 後台管理系統</title>
+<title>居願 — 後台管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -203,7 +203,7 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 <!-- ── LOGIN SCREEN ── -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">居院</div>
+    <div class="login-logo">居願</div>
     <div class="login-sub">後台管理系統</div>
     <div class="form-group">
       <label>帳號</label>
@@ -215,7 +215,7 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
     </div>
     <button class="login-btn" onclick="doLogin()">登　入</button>
     <div class="login-err" id="login-err"></div>
-    <div class="login-footer">居院抱枕批發目錄 v2.0</div>
+    <div class="login-footer">居願抱枕批發目錄 v2.0</div>
   </div>
 </div>
 
@@ -225,7 +225,7 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 <!-- SIDEBAR -->
 <aside id="sidebar">
   <div class="sidebar-brand">
-    <h1>居院</h1>
+    <h1>居願</h1>
     <p>後台管理系統</p>
   </div>
   <nav class="sidebar-nav">
@@ -250,7 +250,7 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
   <div class="nav-item" onclick="logout()" style="color:rgba(255,100,100,.8);margin-top:4px">
     <span class="icon">🚪</span> 登出
   </div>
-  <div class="sidebar-footer">居院抱枕批發目錄 v2.0</div>
+  <div class="sidebar-footer">居願抱枕批發目錄 v2.0</div>
 </aside>
 
 <!-- MAIN -->
@@ -398,7 +398,7 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
         <div class="form-grid">
           <div class="form-group">
             <label>品牌名稱</label>
-            <input type="text" id="cfg-brand" value="居院">
+            <input type="text" id="cfg-brand" value="居願">
           </div>
           <div class="form-group">
             <label>副標題</label>
@@ -601,7 +601,7 @@ function saveProducts(arr){
 }
 function getCfg(){
   const def = {
-    brand:'居院', subtitle:'精品抱枕批發目錄',
+    brand:'居願', subtitle:'精品抱枕批發目錄',
     tagline:'每一個角落，都值得被精心對待',
     footer:'如需訂購或查詢，請聯絡業務人員',
     cats:'簡約條紋風,奢華皮革風,拼接撞色風,手工工藝風,毛絨質感風'
@@ -1152,9 +1152,10 @@ async function generateHTML(onProgress, imageMap=null){
     const p = rawProducts[i];
     if(onProgress) onProgress(i+1, rawProducts.length, p.id);
     const img = imageMap
-      ? (imageMap[p.id] || p.img)           // deploy: 用 GitHub URL / 原始 base64 fallback
-      : (p.img ? await removeBgFromBase64(p.img) : p.img); // preview: 去背
+      ? (imageMap[p.id] || p.img)
+      : (p.img ? await removeBgFromBase64(p.img) : p.img);
     products.push({ ...p, img });
+    await new Promise(r=>setTimeout(r,0)); // 讓出主執行緒，避免卡頁面
   }
   const cfg = getCfg();
   const cats = cfg.cats.split(',').map(s=>s.trim()).filter(Boolean);
@@ -1383,7 +1384,7 @@ async function previewHTML(){
   const html = await generateHTML((cur,total,id)=>{
     document.title = `去背 ${cur}/${total} ${id}`;
   });
-  document.title = '居院 — 後台管理系統';
+  document.title = '居願 — 後台管理系統';
   const blob = new Blob([html], {type:'text/html'});
   window.open(URL.createObjectURL(blob), '_blank');
 }
