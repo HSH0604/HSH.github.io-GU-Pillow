@@ -783,7 +783,8 @@ function editProduct(id){
   editingId = id;
   document.getElementById('modal-title').textContent = '編輯商品 — '+id;
   document.getElementById('f-id').value = p.id;
-  document.getElementById('f-id').disabled = true;
+  document.getElementById('f-id').disabled = false;
+  document.getElementById('f-id').dataset.originalId = id;
   document.getElementById('f-cat').innerHTML = catOptions(p.category);
   document.getElementById('f-name').value = p.name||'';
   document.getElementById('f-desc').value = p.desc||'';
@@ -823,7 +824,8 @@ function saveProduct(){
 
   if(editingId){
     const idx = products.findIndex(p=>p.id===editingId);
-    if(idx>=0) products[idx] = {id:editingId, category:cat, name, desc, size, stock, img};
+    if(id !== editingId && products.find(p=>p.id===id)){ toast('型號 '+id+' 已存在！', 'error'); return; }
+    if(idx>=0) products[idx] = {id, category:cat, name, desc, size, stock, img};
   } else {
     if(products.find(p=>p.id===id)){ toast('型號 '+id+' 已存在！', 'error'); return; }
     products.push({id, category:cat, name, desc, size, stock, img});
