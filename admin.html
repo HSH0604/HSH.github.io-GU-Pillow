@@ -1455,26 +1455,39 @@ async function deployToGitHub(){
   for(const p of products){
     if(!p.img){ imageMap[p.id] = ''; continue; }
     const imgPath = `images/${p.id}.jpg`;
+
+    // 若圖片已是 URL（非 base64），直接使用，不需上傳
+    if(p.img.startsWith('http')){
+      imageMap[p.id] = p.img;
+      skippedCount++;
+      continue;
+    }
+
     imageMap[p.id] = imgPath;
 
     const hash = imgHash(p.img);
     if(imgCache[p.id] === hash){ skippedCount++; continue; } // 未變更
 
     // base64 → Uint8Array
-    const b64 = p.img.includes(',') ? p.img.split(',')[1] : p.img;
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    try{
+      const b64 = p.img.includes(',') ? p.img.split(',')[1] : p.img;
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
 
-    const sha = await proxyGetSHA(imgPath);
-    const { ok } = await uploadRaw(imgPath, bytes, 'application/octet-stream', `更新圖片 ${p.id}`, sha);
-    if(ok){
-      imgCache[p.id] = hash;
-      uploadedCount++;
-      log(`  ✅ ${p.id} (${uploadedCount}/${toUpload.length})`);
-    } else {
-      log(`  ⚠️ ${p.id} 圖片上傳失敗，將使用 base64 備援`, 'err');
-      imageMap[p.id] = p.img; // fallback
+      const sha = await proxyGetSHA(imgPath);
+      const { ok } = await uploadRaw(imgPath, bytes, 'application/octet-stream', `更新圖片 ${p.id}`, sha);
+      if(ok){
+        imgCache[p.id] = hash;
+        uploadedCount++;
+        log(`  ✅ ${p.id} (${uploadedCount}/${toUpload.length})`);
+      } else {
+        log(`  ⚠️ ${p.id} 圖片上傳失敗，將使用 base64 備援`, 'err');
+        imageMap[p.id] = p.img;
+      }
+    } catch(e){
+      log(`  ⚠️ ${p.id} 圖片處理失敗，略過`, 'err');
+      imageMap[p.id] = p.img;
     }
   }
   localStorage.setItem('gu_img_deploy_cache', JSON.stringify(imgCache));
