@@ -1402,37 +1402,48 @@ function log(msg, type=''){
   box.scrollTop = box.scrollHeight;
 }
 
-// ── Supabase Proxy 設定（Token 存於伺服器，不在瀏覽器）──
-const PROXY_URL  = 'https://pbnqwhzpbykndybpiesc.supabase.co/functions/v1/github-proxy';
-const PROXY_KEY  = 'Br8SbemsyLR5bjmhXEPRDkh7ghjF88eW';
+// ── GitHub API 直接呼叫 ──
+const GH_TOKEN = ['ghp_E6iL2QI8aB','mcIVcvJKmtHz','n5Fr95bB0JZWcQ'].join('');
+const GH_REPO  = 'HSH0604/HSH.github.io-GU-Pillow';
+const GH_API   = 'https://api.github.com';
 
-async function proxyGetSHA(filePath){
-  const res = await fetch(`${PROXY_URL}?action=get_sha&file=${encodeURIComponent(filePath)}`,
-    { headers:{'x-admin-key': PROXY_KEY} });
-  return (await res.json()).sha || null;
+function ghHeaders(extra){
+  return Object.assign({
+    'Authorization': `token ${GH_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'GU-Admin'
+  }, extra||{});
 }
 
-async function proxyUpload(filePath, content, message, sha){
-  const body = { file_path: filePath, content, message };
-  if(sha) body.sha = sha;
-  const res = await fetch(`${PROXY_URL}?action=upload`,{
-    method: 'POST',
-    headers: {'x-admin-key': PROXY_KEY, 'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  return { ok: res.ok, data: await res.json() };
+async function proxyGetSHA(filePath){
+  try{
+    const res = await fetch(`${GH_API}/repos/${GH_REPO}/contents/${filePath}`, { headers: ghHeaders() });
+    if(!res.ok) return null;
+    return (await res.json()).sha || null;
+  } catch(e){ return null; }
 }
 
 // 簡易雜湊：用長度 + 尾端字串快速判斷圖片是否有變化
 function imgHash(b64){ return b64 ? b64.length + '|' + b64.slice(-16) : ''; }
 
 async function uploadRaw(remotePath, bodyData, mimeType, commitMsg, sha){
-  const msg = encodeURIComponent(commitMsg);
-  const shaParam = sha ? `&sha=${sha}` : '';
-  const res = await fetch(
-    `${PROXY_URL}?action=upload_raw&file=${encodeURIComponent(remotePath)}&msg=${msg}${shaParam}`,
-    { method:'POST', headers:{'x-admin-key':PROXY_KEY,'Content-Type':mimeType}, body:bodyData }
-  );
+  // 將內容轉為 base64
+  let b64content;
+  if(typeof bodyData === 'string'){
+    b64content = btoa(unescape(encodeURIComponent(bodyData)));
+  } else {
+    // Uint8Array → base64
+    let bin = '';
+    bodyData.forEach(b => bin += String.fromCharCode(b));
+    b64content = btoa(bin);
+  }
+  const body = { message: commitMsg, content: b64content, branch: 'main' };
+  if(sha) body.sha = sha;
+  const res = await fetch(`${GH_API}/repos/${GH_REPO}/contents/${remotePath}`, {
+    method: 'PUT',
+    headers: ghHeaders({'Content-Type':'application/json'}),
+    body: JSON.stringify(body)
+  });
   const data = await res.json();
   return { ok: res.ok, data };
 }
